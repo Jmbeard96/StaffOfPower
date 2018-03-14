@@ -20,3 +20,11 @@ xxxx, blaze rod, xxxx
 The Dragon Staff cannot be used if there are multiple items on the stack. It also cannot be used if you have another item on your offhand.
 
 To use it while holding it in your main hand, right click to cycle through the skills, and left click to use the current skill.
+
+### Staff Abilities
+```
+Launch fire ball,
+summon lightning bolt,
+heal player,
+heal group
+```
