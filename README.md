@@ -22,7 +22,7 @@ The Dragon Staff cannot be used if there are multiple items on the stack. It als
 To use it while holding it in your main hand, right click to cycle through the skills, and left click to use the current skill.
 
 ### Staff Abilities
-
+```
 Launch fire ball,
 Summon lightning bolt,
 Heal player/self,
@@ -30,3 +30,4 @@ Heal group,
 Cloak,
 Shield,
 Flight
+```
