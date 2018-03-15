@@ -29,5 +29,7 @@ Heal player/self,
 Heal group,
 Cloak,
 Shield,
-Flight
+Flight,
+Teleport,
+Knockback
 ```
