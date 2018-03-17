@@ -6,8 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.jmbeard96.Constants.SkillExhaustion;
-import me.jmbeard96.StaffOfPower.PlayerHashMaps;
-
+import me.jmbeard96.StaffOfPower.PlayerMap;
 public class CloakingRunnable extends BukkitRunnable{
 
 	Player p;
@@ -20,12 +19,12 @@ public class CloakingRunnable extends BukkitRunnable{
 	
 	@Override
 	public void run() {
-		if(p.isOnline() && PlayerHashMaps.playerIsCloaked.get(p.getUniqueId()) && gm == GameMode.SURVIVAL) {
+		if(p.isOnline() && PlayerMap.staffPlayers.get(p.getUniqueId()).getIsHidden() && gm == GameMode.SURVIVAL) {
 			if(p.getFoodLevel() != 0) {
 				p.setExhaustion(SkillExhaustion.incrementCloak(p.getExhaustion()));
 			}
 			else {
-				PlayerHashMaps.playerIsCloaked.replace(p.getUniqueId(), false);
+				PlayerMap.staffPlayers.get(p.getUniqueId()).toggleCloak();
 				p.sendMessage(ChatColor.RED + "You are no longer cloaked");
 				cancel();
 			}

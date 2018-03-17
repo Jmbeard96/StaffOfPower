@@ -6,7 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import me.jmbeard96.Constants.Skills.Skill;
+import me.jmbeard96.StaffOfPower.StaffPlayer.Skill;
 
 public class Staff {
 	

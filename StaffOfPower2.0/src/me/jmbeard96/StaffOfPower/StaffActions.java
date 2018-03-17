@@ -2,7 +2,6 @@ package me.jmbeard96.StaffOfPower;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -35,11 +34,10 @@ import org.bukkit.util.Vector;
 
 import me.jmbeard96.Constants.SkillExhaustion;
 import me.jmbeard96.Constants.Staff;
-import me.jmbeard96.Constants.Skills;
-import me.jmbeard96.Constants.Skills.Skill;
 import me.jmbeard96.Runnables.CloakingRunnable;
 import me.jmbeard96.Runnables.FlightExhaustionRunnable;
 import me.jmbeard96.Runnables.ShieldRunnable;
+import me.jmbeard96.StaffOfPower.StaffPlayer.Skill;
 
 public class StaffActions implements Listener {
 
@@ -123,8 +121,11 @@ public class StaffActions implements Listener {
 	}
 	
 	public void cloaking(Player p) {
-		if (PlayerHashMaps.playerIsCloaked.get(p.getUniqueId())) {
-			PlayerHashMaps.playerIsCloaked.replace(p.getUniqueId(), false);
+		
+		StaffPlayer sp = PlayerMap.staffPlayers.get(p.getUniqueId());
+		
+		if (sp.getIsHidden()) {
+			sp.toggleCloak();
 			for (Player player : mainPlugin.getServer().getOnlinePlayers()) {
 				if (player.getUniqueId() != p.getUniqueId()) {
 					player.showPlayer(p);
@@ -132,7 +133,7 @@ public class StaffActions implements Listener {
 			}
 			p.sendMessage(ChatColor.RED + "You are no longer cloaked");
 		} else {
-			PlayerHashMaps.playerIsCloaked.replace(p.getUniqueId(), true);
+			sp.toggleCloak();
 			for (Player player : mainPlugin.getServer().getOnlinePlayers()) {
 				if (player.getUniqueId() != p.getUniqueId()) {
 					player.hidePlayer(p);
@@ -153,11 +154,12 @@ public class StaffActions implements Listener {
 	}
 	
 	public void shield(Player p) {
-		if (PlayerHashMaps.playerIsInvulnerable.get(p.getUniqueId())) {
-			PlayerHashMaps.playerIsInvulnerable.replace(p.getUniqueId(), false);
+		StaffPlayer sp = PlayerMap.staffPlayers.get(p.getUniqueId());
+		if (sp.getIsInvulnerable()) {
+			sp.toggleShield();;
 			p.sendMessage(ChatColor.RED + "You are no longer invulnerable");
 		} else {
-			PlayerHashMaps.playerIsInvulnerable.replace(p.getUniqueId(), true);
+			sp.toggleShield();
 			ShieldRunnable sr = new ShieldRunnable(p);
 			sr.runTaskTimer(mainPlugin, 20, 20);
 			p.sendMessage(ChatColor.GREEN + "You are now invulverable");
@@ -241,11 +243,11 @@ public class StaffActions implements Listener {
 		GameMode gm = p.getGameMode();
 
 		if (gm == GameMode.SURVIVAL) {
-			if (p.getLevel() >= Skill.FLIGHT.level()) {
+			if (p.getLevel() >= PlayerMap.staffPlayers.get(p.getUniqueId()).flightLevel) {
 				FlightExhaustionRunnable incrementExhaust = new FlightExhaustionRunnable(p);
 				incrementExhaust.runTaskTimer(mainPlugin, 20, 20);
 			} else {
-				p.sendMessage(Skills.higherLevelString);
+				p.sendMessage("");
 			}
 		}
 	}
@@ -261,7 +263,7 @@ public class StaffActions implements Listener {
 		if (gm == GameMode.SURVIVAL) {
 			if (Staff.isStaff(itemInHand)) {
 				if (p.getFoodLevel() != 0) {
-					if (p.getLevel() >= Skill.FLIGHT.level()) {
+					if (p.getLevel() >= PlayerMap.staffPlayers.get(p.getUniqueId()).flightLevel) {
 						p.setAllowFlight(true);
 					} else {
 						p.setAllowFlight(false);
@@ -283,13 +285,14 @@ public class StaffActions implements Listener {
 	@EventHandler
 	public void onItemChange(PlayerItemHeldEvent e) {
 		Player p = e.getPlayer();
+		StaffPlayer sp = PlayerMap.staffPlayers.get(p.getUniqueId());
 		ItemStack newItem = p.getInventory().getItem(e.getNewSlot());
 		GameMode gm = p.getGameMode();
 
 		if (gm == GameMode.SURVIVAL) {
 			if (Staff.isStaff(newItem)) {
 				if (p.getFoodLevel() != 0) {
-					if (p.getLevel() >= Skill.FLIGHT.level()) {
+					if (p.getLevel() >= sp.flightLevel) {
 						p.setAllowFlight(true);
 					} else {
 						p.setAllowFlight(false);
@@ -304,15 +307,15 @@ public class StaffActions implements Listener {
 			p.setAllowFlight(true);
 		}
 
-		if (PlayerHashMaps.playerIsInvulnerable.get(p.getUniqueId())) {
+		if (sp.getIsInvulnerable()) {
 			if (!Staff.isStaff(newItem)) {
-				PlayerHashMaps.playerIsInvulnerable.replace(p.getUniqueId(), false);
+				sp.toggleShield();
 				p.sendMessage(ChatColor.RED + "You are no longer invulnerable");
 			}
 		}
-		if (PlayerHashMaps.playerIsCloaked.get(p.getUniqueId())) {
+		if (sp.getIsHidden()) {
 			if (!Staff.isStaff(newItem)) {
-				PlayerHashMaps.playerIsCloaked.replace(p.getUniqueId(), false);
+				sp.toggleCloak();
 				p.sendMessage(ChatColor.RED + "You are no longer cloaked");
 			}
 		}
@@ -324,9 +327,7 @@ public class StaffActions implements Listener {
 	public void onClick(PlayerInteractEvent e) {
 
 		Player p = e.getPlayer();
-		// System.out.println(Staff.isStaff(p.getInventory().getItemInMainHand()));
-		UUID id = p.getUniqueId();
-		SkillIterator skillIterator = PlayerHashMaps.playerSkills.get(id);
+		StaffPlayer sp = PlayerMap.staffPlayers.get(p.getUniqueId());
 		PlayerInventory i = p.getInventory();
 		GameMode gm = p.getGameMode();
 		Vector direction = p.getLocation().getDirection().normalize();
@@ -341,15 +342,15 @@ public class StaffActions implements Listener {
 					// Skills
 					/*****************************************************************************************************************************/
 					e.setCancelled(true);
-					int currentSkill = skillIterator.getSkillID();
-					List<String> playerSkills = Arrays.asList(PlayerHashMaps.playerSkills.get(id).skills);
-					int fireballIndex = playerSkills.indexOf(Skill.FIREBALL.skill());
-					int lightningIndex = playerSkills.indexOf(Skill.LIGHTNING.skill());
-					int healIndex = playerSkills.indexOf(Skill.HEAL.skill());
-					int splashHealIndex = playerSkills.indexOf(Skill.SPLASH_HEAL.skill());
-					int cloakingIndex = playerSkills.indexOf(Skill.CLOAKING.skill());
-					int shieldIndex = playerSkills.indexOf(Skill.SHIELD.skill());
-					int teleportIndex = playerSkills.indexOf(Skill.TELEPORT.skill());
+					int currentSkill = sp.getSkillID();
+					List<Skill> playerSkills = Arrays.asList(Skill.values());
+					int fireballIndex = playerSkills.indexOf(Skill.FIREBALL);
+					int lightningIndex = playerSkills.indexOf(Skill.LIGHTNING);
+					int healIndex = playerSkills.indexOf(Skill.HEAL);
+					int splashHealIndex = playerSkills.indexOf(Skill.SPLASH_HEAL);
+					int cloakingIndex = playerSkills.indexOf(Skill.CLOAKING);
+					int shieldIndex = playerSkills.indexOf(Skill.SHIELD);
+					int teleportIndex = playerSkills.indexOf(Skill.TELEPORT);
 
 					// Launch fire ball
 					if (currentSkill == fireballIndex) {
@@ -358,7 +359,7 @@ public class StaffActions implements Listener {
 							
 							fireBall(p, direction, exhaustion, gm);
 						} else {
-							p.sendMessage(Skills.higherLevelString);
+							p.sendMessage(sp.higherLevelString);
 						}
 					}
 
@@ -368,7 +369,7 @@ public class StaffActions implements Listener {
 								|| gm == GameMode.CREATIVE) {
 							summonLightning(p, gm, exhaustion);
 						} else {
-							p.sendMessage(Skills.higherLevelString);
+							p.sendMessage(sp.higherLevelString);
 						}
 					}
 
@@ -378,7 +379,7 @@ public class StaffActions implements Listener {
 							
 							healSelf(p,exhaustion);
 						} else {
-							p.sendMessage(Skills.higherLevelString);
+							p.sendMessage(sp.higherLevelString);
 						}
 					}
 
@@ -390,7 +391,7 @@ public class StaffActions implements Listener {
 							splashHeal(p, exhaustion);
 						}
 						else {
-							p.sendMessage(Skills.higherLevelString);
+							p.sendMessage(sp.higherLevelString);
 						}
 					}
 
@@ -402,7 +403,7 @@ public class StaffActions implements Listener {
 							cloaking(p);
 						} 
 						else {
-							p.sendMessage(Skills.higherLevelString);
+							p.sendMessage(sp.higherLevelString);
 						}
 					}
 
@@ -414,7 +415,7 @@ public class StaffActions implements Listener {
 							shield(p);
 						} 
 						else {
-							p.sendMessage(Skills.higherLevelString);
+							p.sendMessage(sp.higherLevelString);
 						}
 					}
 
@@ -425,7 +426,7 @@ public class StaffActions implements Listener {
 							
 							teleport(p);
 						} else {
-							p.sendMessage(Skills.higherLevelString);
+							p.sendMessage(sp.higherLevelString);
 						}
 					}
 					// Punch
@@ -435,7 +436,7 @@ public class StaffActions implements Listener {
 								|| gm == GameMode.CREATIVE) {
 
 						} else {
-							p.sendMessage(Skills.higherLevelString);
+							p.sendMessage(sp.higherLevelString);
 						}
 					}
 					/***********************************************************************************************************************************************************/
@@ -445,7 +446,7 @@ public class StaffActions implements Listener {
 			else if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
 
 				if (e.getHand() == EquipmentSlot.HAND) {
-					p.sendMessage(ChatColor.YELLOW + skillIterator.nextSkill());
+					p.sendMessage((ChatColor.WHITE + Integer.toString(sp.getSkillID() + 1) + ". ") + (ChatColor.YELLOW + sp.nextSkill()));
 				}
 			}
 		}
@@ -465,14 +466,13 @@ public class StaffActions implements Listener {
 		if (e.getDamager() instanceof Player) {
 			if (e.getEntity() instanceof LivingEntity) {
 				Player healer = (Player) e.getDamager();
-				UUID id = healer.getUniqueId();
-				SkillIterator skills = PlayerHashMaps.playerSkills.get(id);
-
+				StaffPlayer sp = PlayerMap.staffPlayers.get(healer.getUniqueId());
+				
 				PlayerInventory i = healer.getInventory();
 				LivingEntity entityHealed = (LivingEntity) e.getEntity();
 				if (Staff.isStaff(i.getItemInMainHand()) && i.getItemInOffHand().getType() == Material.AIR) {
 					if (healer.getFoodLevel() != 0 || healer.getGameMode() == GameMode.CREATIVE) {
-						if (skills.getSkillID() == 2) {
+						if (sp.getSkillID() == 2) {
 							e.setCancelled(true);
 
 							float healerExhaustion = healer.getExhaustion();
@@ -511,7 +511,7 @@ public class StaffActions implements Listener {
 	public void shield(EntityDamageEvent e) {
 		if (e.getEntity() instanceof Player) {
 			Player p = (Player) e.getEntity();
-			if (PlayerHashMaps.playerIsInvulnerable.get(p.getUniqueId())) {
+			if (PlayerMap.staffPlayers.get(p.getUniqueId()).getIsInvulnerable()) {
 				e.setCancelled(true);
 			}
 
@@ -529,7 +529,7 @@ public class StaffActions implements Listener {
 		if (e.getTarget() instanceof Player) {
 			Player p = (Player) e.getTarget();
 
-			if (PlayerHashMaps.playerIsCloaked.get(p.getUniqueId())) {
+			if (PlayerMap.staffPlayers.get(p.getUniqueId()).getIsHidden()) {
 				e.setCancelled(true);
 			}
 		}

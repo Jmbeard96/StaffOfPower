@@ -1,5 +1,6 @@
 package me.jmbeard96.StaffOfPower;
 
+
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -11,13 +12,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import me.jmbeard96.Constants.Skills;
-import me.jmbeard96.Constants.Skills.Skill;
 import me.jmbeard96.Constants.Staff;
 
 public class Main extends JavaPlugin implements Listener{
 	
 	private ShapedRecipe staffRecipe;
+	
 	
 	public void addStaffRecipe() {
 		ItemStack dragonStaff = Staff.item;
@@ -36,8 +36,8 @@ public class Main extends JavaPlugin implements Listener{
 	public void onEnable() {
 		addStaffRecipe();
 		this.getServer().getPluginManager().registerEvents(new StaffActions(this), this);
-		this.getServer().getPluginManager().registerEvents(new PlayerHashMaps(getServer().getMaxPlayers(), this), this);
 		this.getServer().getPluginManager().registerEvents(this, this);
+		this.getServer().getPluginManager().registerEvents(new PlayerMap(this), this);
 	}
 	
 	@Override
@@ -53,9 +53,9 @@ public class Main extends JavaPlugin implements Listener{
 				Player p = (Player)e.getWhoClicked();
 				
 				if(p.getGameMode() == GameMode.SURVIVAL) {
-					if(p.getLevel() < Skill.CRAFT.level()) {
+					if(p.getLevel() < PlayerMap.staffPlayers.get(p.getUniqueId()).craftLevel) {
 						e.setCancelled(true);
-						p.sendMessage(Skills.higherLevelString);
+						p.sendMessage(PlayerMap.staffPlayers.get(p.getUniqueId()).higherLevelString);
 					}
 					else {
 						p.setLevel(p.getLevel() - 10);
